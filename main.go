@@ -23,7 +23,7 @@ func main() {
 	}
 
 	spoolFileSpec := flag.String("input", workingDir, "input folder to recurse through or spool file")
-	backupDir := flag.String("backup", "", "backup folder")
+	backupDir := flag.String("backup", workingDir+".tmp", "backup folder")
 	okToOverwrite := flag.Bool("overwrite", false, "confirm overwriting conflicting backup files")
 
 	if backupStat, err := os.Stat(*backupDir); err == nil {
@@ -37,10 +37,7 @@ func main() {
 			fmt.Printf("Backup dir exists! Conflicting files will be overwritten!\n")
 		}
 	} else if errors.Is(err, os.ErrNotExist) {
-		if err := os.MkdirAll(*backupDir, 750); err != nil {
-			fmt.Printf("Failed to create backup dir '%s'. Cannot proceed: %s\n", *backupDir, err)
-			os.Exit(255)
-		}
+		// do nothing
 	} else {
 		fmt.Printf("Failed to stat backup dir '%s'. Cannot proceed: %s\n", *backupDir, err)
 		os.Exit(255)
@@ -53,15 +50,25 @@ func main() {
 	}
 
 	var spoolMatches []string
-	if spoolFileStat != nil {
+	if spoolFileStat != nil && !spoolFileStat.IsDir() {
 		spoolMatches = []string{*spoolFileSpec}
 	} else if spoolMatches, err = filepathx.Glob(filepath.Join(*spoolFileSpec, "**", "*-H")); err != nil {
 		fmt.Printf("Failed to glob filespec '%s'. Cannot proceed: %s\n", *spoolFileSpec, err)
 		os.Exit(255)
 	}
 
+	var backupDirCreated bool
+
 	var count int
 	for i, spoolFilePath := range spoolMatches {
+		if !backupDirCreated {
+			if err := os.MkdirAll(*backupDir, 750); err != nil {
+				fmt.Printf("Failed to create backup dir '%s'. Cannot proceed: %s\n", *backupDir, err)
+				os.Exit(255)
+			}
+			backupDirCreated = true
+		}
+
 		spoolFileRelativePath := strings.Replace(spoolFilePath, *spoolFileSpec, "", 1)
 		spoolFileBackupFilePath := filepath.Join(*backupDir, spoolFileRelativePath)
 		spoolFileBackupDirPath := filepath.Dir(spoolFileBackupFilePath)
