@@ -219,5 +219,6 @@ func getProcessedSpoolHeaderLines(fileName string, reader io.Reader) ([]string, 
 		validLines[2] = fmt.Sprintf("<%s>", senderAddress)
 	}
 
+	validLines[0] = fileName
 	return validLines, nil
 }
