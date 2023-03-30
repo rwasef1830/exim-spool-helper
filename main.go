@@ -23,15 +23,23 @@ func main() {
 	}
 
 	spoolFileSpec := flag.String("input", workingDir, "input folder to recurse through or spool file")
-	backupDir := flag.String("backup", workingDir+".tmp", "backup folder")
+	backupDir := flag.String("backup", "", "backup folder")
 	okToOverwrite := flag.Bool("overwrite", false, "confirm overwriting conflicting backup files")
+
+	flag.Parse()
+
+	if *backupDir == "" {
+		*backupDir = *spoolFileSpec + ".bak"
+	}
 
 	if backupStat, err := os.Stat(*backupDir); err == nil {
 		if !backupStat.IsDir() {
 			fmt.Printf("Backup dir exists and is a file. Cannot proceed.\n")
 			os.Exit(255)
 		} else if !*okToOverwrite {
-			fmt.Printf("Backup dir exists! Rename backup dir or relaunch with overwrite flag to confirm.\n")
+			fmt.Printf(
+				"Backup dir '%s' exists! Rename backup dir or relaunch with overwrite flag to confirm.\n",
+				*backupDir)
 			os.Exit(255)
 		} else {
 			fmt.Printf("Backup dir exists! Conflicting files will be overwritten!\n")

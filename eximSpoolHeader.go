@@ -40,7 +40,10 @@ func processSpoolHeaderFile(filePath string) error {
 		return err
 	}
 
-	if err := os.Rename(writeFilePath, fileName); err != nil {
+	_ = spoolFileHandle.Close()
+	_ = spoolWriteFileHandle.Close()
+
+	if err := os.Rename(writeFilePath, filePath); err != nil {
 		return err
 	}
 
@@ -95,6 +98,8 @@ func getProcessedSpoolHeaderLines(fileName string, reader io.Reader) ([]string, 
 	var lastHeaderValue string
 
 	flushHeader := func() {
+		lastHeaderName = strings.Trim(lastHeaderName, "\r\n\t ")
+		lastHeaderValue = strings.Trim(lastHeaderValue, "\r\n\t ")
 		lastHeaderByteCount = int64(len(lastHeaderName) + len(": ") + len(lastHeaderValue) + 1)
 
 		var spacer string
@@ -122,7 +127,7 @@ func getProcessedSpoolHeaderLines(fileName string, reader io.Reader) ([]string, 
 			fmt.Printf("%s:line %d: %s\n", fileName, count, message)
 		}
 
-		line := scanner.Text()
+		line := strings.Trim(scanner.Text(), "\r\n\t ")
 		if line == "" {
 			if !foundEmptyLine && foundAnyContent {
 				foundEmptyLine = true
@@ -140,15 +145,13 @@ func getProcessedSpoolHeaderLines(fileName string, reader io.Reader) ([]string, 
 		match := headerPattern.FindStringSubmatch(line)
 
 		if len(match) == 0 {
-			trimmedLine := strings.Trim(line, "\r\n\t ")
-
 			if lastHeaderName != "" {
 				if lastHeaderValue == "" {
-					lastHeaderValue = trimmedLine
+					lastHeaderValue = line
 					continue
 				}
 
-				lastHeaderValue += fmt.Sprintf("\n\t%s", trimmedLine)
+				lastHeaderValue += fmt.Sprintf("\n\t%s", line)
 				continue
 			}
 
@@ -157,7 +160,7 @@ func getProcessedSpoolHeaderLines(fileName string, reader io.Reader) ([]string, 
 				continue
 			}
 
-			validLines = append(validLines, trimmedLine)
+			validLines = append(validLines, line)
 			continue
 		}
 
