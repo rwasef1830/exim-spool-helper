@@ -90,6 +90,8 @@ func getProcessedSpoolHeaderLines(fileName string, reader io.Reader) ([]string, 
 	var foundAnyContent bool
 	var foundEmptyLine bool
 	var foundAnyHeader bool
+	var regenerateSenderLine bool
+	var senderAddress string
 
 	var validLines []string
 	var lastHeaderByteCount int64
@@ -117,6 +119,17 @@ func getProcessedSpoolHeaderLines(fileName string, reader io.Reader) ([]string, 
 			lastHeaderName,
 			lastHeaderValue)
 		validLines = append(validLines, newValidLine)
+
+		if lastHeaderFlag == "F" {
+			startIndex := strings.Index(lastHeaderValue, "<")
+
+			if startIndex == -1 {
+				senderAddress = lastHeaderValue
+			} else {
+				endIndex := strings.Index(lastHeaderValue[startIndex:], ">")
+				senderAddress = strings.Trim(lastHeaderValue[startIndex:(endIndex+startIndex)], "<>'\"")
+			}
+		}
 	}
 
 	var count int
@@ -160,6 +173,10 @@ func getProcessedSpoolHeaderLines(fileName string, reader io.Reader) ([]string, 
 				continue
 			}
 
+			if len(validLines) == 2 && line[0] != '<' && line[len(line)-1] != '>' {
+				regenerateSenderLine = true
+			}
+
 			validLines = append(validLines, line)
 			continue
 		}
@@ -194,6 +211,12 @@ func getProcessedSpoolHeaderLines(fileName string, reader io.Reader) ([]string, 
 
 	if lastHeaderName != "" {
 		flushHeader()
+	}
+
+	if regenerateSenderLine {
+		validLines = append(validLines, "")
+		copy(validLines[3:], validLines[2:])
+		validLines[2] = fmt.Sprintf("<%s>", senderAddress)
 	}
 
 	return validLines, nil
