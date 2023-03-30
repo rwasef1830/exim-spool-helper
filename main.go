@@ -11,7 +11,11 @@ import (
 	"strings"
 )
 
+var version string
+
 func main() {
+	fmt.Printf("* exim-spool-helper v%s - https://github.com/rwasef1830/exim-spool-helper\n", version)
+
 	workingDir, err := os.Getwd()
 	if err != nil {
 		fmt.Printf("Failed to get working dir\n")
